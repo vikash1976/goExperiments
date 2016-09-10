@@ -15,7 +15,7 @@ func worker(id int, jobs <-chan int, results chan<- map[int]int) {
 	for j := range jobs {
 		fmt.Println("worker", id, "processing job", j)
 		time.Sleep(time.Second)
-		res := map[int]int{j: j * 2}
+		res := map[int]int{j: j * 2} // result is map of job id and calculated value
 		results <- res
 	}
 }
@@ -26,7 +26,7 @@ func main() {
 	// them work and collect their results. We make 2
 	// channels for this.
 	jobs := make(chan int, 100)
-	results := make(chan map[int]int, 100)
+	results := make(chan map[int]int, 100) // so that we get the mapping between the job and result
 
 	// This starts up 3 workers, initially blocked
 	// because there are no jobs yet.
