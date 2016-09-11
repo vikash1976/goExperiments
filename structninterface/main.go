@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 )
-
 // Shape interface with area method set ...
 type Shape interface {
 	area() float64
