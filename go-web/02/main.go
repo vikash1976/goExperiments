@@ -77,7 +77,7 @@ func customerHandler(w http.ResponseWriter, r *http.Request, params httprouter.P
 		return
 	}
 	setHeaders(&w)
-	io.WriteString(w, cust)
+	w.Write(cust)//another way of writing, edited GetCustomer to return []byte instaed of string
 	
 }
 
@@ -116,13 +116,11 @@ func main() {
 	router.GET("/view/:file", makeHandler(viewHandler))
 	router.GET("/edit/:file", makeHandler(editHandler))
 	router.POST("/save/:file", makeHandler(saveHandler))
-	router.GET("/api/customer", customersHandler)
+	router.GET("/api/customers", customersHandler)
 	router.GET("/api/customer/:id", customerHandler)
 	router.PUT("/api/customer/:id", customerUpdateHandler)
 	router.DELETE("/api/customer/:id", customerDeleteHandler)
-	/*http.HandleFunc("/view/",  makeHandler(viewHandler))
-	  http.HandleFunc("/edit/",  makeHandler(editHandler))
-	  http.HandleFunc("/save/",  makeHandler(saveHandler))*/
+	
 	http.ListenAndServe(":8070", router)
-	//fmt.Println(customer.GetCustomer(1))
+	
 }

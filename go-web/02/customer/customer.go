@@ -27,7 +27,7 @@ var customers  = Customers {
 }
 
 //GetCustomer based on supplied index
-func GetCustomer(index int) string {
+func GetCustomer(index int) []byte {
     var js = []byte("{}")
     defer func() {
         
@@ -42,10 +42,10 @@ func GetCustomer(index int) string {
     js, err := json.Marshal(custToReturn)
     if err != nil {
         fmt.Println(err)
-        return "Error marshalling customer"
+        return []byte("Error marshalling customer")
     }
     fmt.Println("Returning from GetCustomer")
-    return string(js)
+    return js
 }
 
 //GetCustomers gets all customers
