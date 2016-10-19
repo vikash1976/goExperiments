@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"github.com/vikash1976/goExperiments/go-web/02/page"
+	"github.com/vikash1976/goExperiments/go-web/go-http-server/page"
 	"net/http"
 	"regexp"
-	"github.com/vikash1976/goExperiments/go-web/02/customer"
+	"github.com/vikash1976/goExperiments/go-web/go-http-server/customer"
 	"io"
 	"io/ioutil"
 	"strconv"

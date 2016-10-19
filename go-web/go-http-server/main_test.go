@@ -8,7 +8,7 @@ import (
     "encoding/json"
     "strings"
     "io/ioutil"
-    "github.com/vikash1976/goExperiments/go-web/02/customer"
+    "github.com/vikash1976/goExperiments/go-web/go-http-server/customer"
 )
 //Testing a GET method
 func Test_customerHandler(t *testing.T) {
