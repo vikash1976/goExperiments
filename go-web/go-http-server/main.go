@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"github.com/vikash1976/goExperiments/go-web/go-http-server/page"
-	"net/http"
-	"regexp"
 	"github.com/vikash1976/goExperiments/go-web/go-http-server/customer"
+	"github.com/vikash1976/goExperiments/go-web/go-http-server/page"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"regexp"
 	"strconv"
-	)
+)
 
 var validPath = regexp.MustCompile("([a-zA-Z0-9]+)$")
 
@@ -25,13 +25,9 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, httprouter.Params, 
 		fn(w, r, params, m[1])
 	}
 }
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.Path)
-	fmt.Fprintf(w, "I love %s!", r.URL.Path[1:])
-}
 
 func viewHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params, title string) {
-	
+
 	p, err := page.LoadPage(title)
 	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
@@ -41,16 +37,15 @@ func viewHandler(w http.ResponseWriter, r *http.Request, params httprouter.Param
 }
 
 func editHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params, title string) {
-	
+
 	p, err := page.LoadPage(title)
 	if err != nil {
 		p = &page.Page{Title: title}
 	}
 	page.RenderTemplatePage(w, "edit", p)
-
 }
 func saveHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params, title string) {
-	
+
 	body := r.FormValue("body")
 	p := &page.Page{Title: title, Body: []byte(body)}
 	err := p.Save()
@@ -63,44 +58,39 @@ func saveHandler(w http.ResponseWriter, r *http.Request, params httprouter.Param
 
 func customersHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	setHeaders(&w)
-
 	io.WriteString(w, customer.GetCustomers())
-	
 }
 func customerHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	
+
 	custID, _ := strconv.Atoi(params.ByName("id"))
 	cust := customer.GetCustomer(custID)
-	
 	if len(cust) == 0 {
 		http.Error(w, "Invalid Index", http.StatusInternalServerError)
 		return
 	}
 	setHeaders(&w)
-	w.Write(cust)//another way of writing, edited GetCustomer to return []byte instaed of string
-	
+	w.Write(cust) //another way of writing, edited GetCustomer to return []byte instaed of string
+
 }
 
 func customerUpdateHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	//fmt.Fprintln(w, "post update")
 	fmt.Println("Param is: ", params)
 	body, err := ioutil.ReadAll(r.Body)
-    if err != nil {
-        fmt.Println("some error")
-    }
-    fmt.Println(string(body))
-	 //var t map[string]interface{}
+	if err != nil {
+		fmt.Println("some error")
+	}
+
 	cust := customer.UpdateCustomer(body)
 	setHeaders(&w)
-    io.WriteString(w, cust)
-	
+	io.WriteString(w, cust)
+
 }
 func customerDeleteHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	custID, _ := strconv.Atoi(params.ByName("id"))
 	cust := customer.DeleteCustomer(custID)
 	setHeaders(&w)
-    io.WriteString(w, cust)
-	
+	io.WriteString(w, cust)
 }
 
 func setHeaders(w *http.ResponseWriter) {
@@ -120,7 +110,7 @@ func main() {
 	router.GET("/api/customer/:id", customerHandler)
 	router.PUT("/api/customer/:id", customerUpdateHandler)
 	router.DELETE("/api/customer/:id", customerDeleteHandler)
-	
+
 	http.ListenAndServe(":8070", router)
-	
+
 }

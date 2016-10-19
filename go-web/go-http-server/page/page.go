@@ -1,7 +1,9 @@
 package page
 
+/****
+Package with all page related functions
+****/
 import (
-	
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -15,7 +17,6 @@ type Page struct {
 }
 
 var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
-//var validPath = regexp.MustCompile("([a-zA-Z0-9]+)$")
 
 //Save function saves the body content as file
 func (p *Page) Save() error {
@@ -34,16 +35,6 @@ func LoadPage(title string) (*Page, error) {
 	return &Page{Title: title, Body: body}, nil
 
 }
-
-//GetTitle gets the title after validation per validPath
-/*func GetTitle(w http.ResponseWriter, r *http.Request, params httprouter.Params) (string, error) {
-	m := validPath.FindStringSubmatch(params.ByName("file"))
-	if m == nil {
-		//http.NotFound(w, r)
-		return "", errors.New("Invalid Page Title")
-	}
-	return m[1], nil // The title is the second subexpression.
-}*/
 
 //RenderTemplatePage function renders the template given as 2nd arg
 func RenderTemplatePage(w http.ResponseWriter, tmpl string, p *Page) {
