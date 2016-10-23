@@ -4,7 +4,7 @@ package page
 Package with all page related functions
 ****/
 import (
-	"fmt"
+	"log"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -16,7 +16,7 @@ type Page struct {
 	Body  []byte
 }
 
-var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
+var templates = template.Must(template.ParseFiles("edit.html", "view.html", "getToken.html"))
 
 //Save function saves the body content as file
 func (p *Page) Save() error {
@@ -27,7 +27,8 @@ func (p *Page) Save() error {
 //LoadPage loads the provide file content as page
 func LoadPage(title string) (*Page, error) {
 	filename := title + ".txt"
-	fmt.Printf("Reading file: %s\n", filename)
+	log.Printf("Reading file: %s\n", filename)
+	
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

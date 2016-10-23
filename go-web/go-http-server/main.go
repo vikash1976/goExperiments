@@ -1,15 +1,18 @@
 package main
 
 import (
+	"log"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"github.com/vikash1976/goExperiments/go-web/go-http-server/customer"
-	"github.com/vikash1976/goExperiments/go-web/go-http-server/page"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net"
 	"regexp"
 	"strconv"
+	"github.com/julienschmidt/httprouter"
+	"github.com/codegangsta/negroni"
+	"github.com/vikash1976/goExperiments/go-web/go-http-server/customer"
+	"github.com/vikash1976/goExperiments/go-web/go-http-server/page"
 )
 
 var validPath = regexp.MustCompile("([a-zA-Z0-9]+)$")
@@ -56,6 +59,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request, params httprouter.Param
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
+
 func customersHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	setHeaders(&w)
 	io.WriteString(w, customer.GetCustomers())
@@ -74,11 +78,11 @@ func customerHandler(w http.ResponseWriter, r *http.Request, params httprouter.P
 }
 
 func customerUpdateHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	//fmt.Fprintln(w, "post update")
-	fmt.Println("Param is: ", params)
+	//log.Fprintln(w, "post update")
+	log.Println("Param is: ", params)
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println("some error")
+		log.Println("some error")
 	}
 
 	cust := customer.UpdateCustomer(body)
@@ -101,8 +105,39 @@ func setHeaders(w *http.ResponseWriter) {
 
 }
 
+func handleAuthRoutes (w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	p := &page.Page{Title: "Deal", Body: []byte("Here is the deal, Enjoi!!!")}
+	page.RenderTemplatePage(w, "getToken", p)
+}
+
+func myMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+  ip, port, err := net.SplitHostPort(r.RemoteAddr)
+    if err != nil {
+        fmt.Fprintf(w, "userip: %q is not IP:port", r.RemoteAddr)
+    }
+
+    userIP := net.ParseIP(ip)
+    if userIP == nil {
+        fmt.Fprintf(w, "userip: %q is not IP:port", r.RemoteAddr)
+        return
+    }
+
+    // This will only be defined when site is accessed via non-anonymous proxy
+    // and takes precedence over RemoteAddr
+    // Header.Get is case-insensitive
+    forward := r.Header.Get("X-Forwarded-For")
+
+    log.Printf("Client's IP: %s\n", ip)
+    log.Printf("Client's Port: %s\n", port)
+    log.Printf("Client's Forwarded for: %s\n", forward)
+  next(w, r)//call next function on the stack of middleware
+ 
+}
 func main() {
-	router := httprouter.New()
+	router := httprouter.New() //instantiating router - httprouter
+	//advanced router http://www.gorillatoolkit.org/pkg/mux with more features 
+	
+	//mapping request paths to handlers
 	router.GET("/view/:file", makeHandler(viewHandler))
 	router.GET("/edit/:file", makeHandler(editHandler))
 	router.POST("/save/:file", makeHandler(saveHandler))
@@ -110,7 +145,15 @@ func main() {
 	router.GET("/api/customer/:id", customerHandler)
 	router.PUT("/api/customer/:id", customerUpdateHandler)
 	router.DELETE("/api/customer/:id", customerDeleteHandler)
+	router.GET("/auth/whatsthedeal", handleAuthRoutes)
+	
 
-	http.ListenAndServe(":8070", router)
+	//With the middleware we can stack up set of functions that will run for each of
+	//our requests before we actually land into handler function
+	n := negroni.New() //instatiating a middlewrae - negroni
+	n.Use(negroni.NewLogger())//adding Logger middleware
+	n.Use(negroni.HandlerFunc(myMiddleware))//adding our custom function as middleware
+  	n.UseHandler(router)//configuring middleware to use router for all request to handler mapping
+	http.ListenAndServe(":8070", n)
 
 }

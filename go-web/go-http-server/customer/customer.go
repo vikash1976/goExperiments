@@ -5,7 +5,7 @@ Package with all customer related functions
 ****/
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 )
 
 //Customer type definition
@@ -32,14 +32,14 @@ var customers = Customers{
 	},
 }
 
-//GetCustomer based on supplied index
+//GetCustomer returns customer based on provided index
 func GetCustomer(index int) []byte {
 	var js = []byte("{}")
 	//to handle any panic
 	defer func() {
 
 		if r := recover(); r != nil {
-			fmt.Printf("Panic Handled locally: %s\n", r)
+			log.Printf("Panic Handled locally: %s\n", r)
 
 		}
 
@@ -48,7 +48,7 @@ func GetCustomer(index int) []byte {
 	custToReturn := customers[index-1]
 	js, err := json.Marshal(custToReturn)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []byte("Error marshalling customer")
 	}
 	return js
@@ -56,7 +56,7 @@ func GetCustomer(index int) []byte {
 
 //GetCustomers gets all customers
 func GetCustomers() string {
-	fmt.Printf("Returning Customer %s\n", customers)
+	log.Printf("Returning Customer %s\n", customers)
 	js, err := json.Marshal(customers)
 	if err != nil {
 		return "Error marshalling customer"
