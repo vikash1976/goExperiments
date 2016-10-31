@@ -11,7 +11,9 @@ A go http server starter project with negroni middleware to implement few routes
 
 - download or fork the repository, unzip it, go to go-http-server and do follwoing commands
 
-``` go get github.com/julienschmidt/httprouter ```
+``` go get gopkg.in/mgo.v2 ```
+
+``` go get github.com/gorilla/mux ```
 
 ``` go get github.com/codegangsta/negroni ```
 
