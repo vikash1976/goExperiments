@@ -1,0 +1,12 @@
+<script>
+    function getToken(){
+        console.log("Here is your token");
+        window.localStorage.setItem("x-Auth", "Vikash");
+    }
+</script>
+
+<h1>{{.Title}}</h1>
+
+<p><input type="button" onClick="getToken()" value="Get Token from Here"></p>
+
+<div>{{printf "%s" .Body}}</div>

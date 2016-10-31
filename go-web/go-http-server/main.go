@@ -1,5 +1,4 @@
 package main
-
 import (
 	"log"
 	"fmt"
@@ -16,8 +15,8 @@ import (
 )
 
 var validPath = regexp.MustCompile("([a-zA-Z0-9]+)$")
-
-//function with closure to bring title check and error handling at one place
+//Auxilary function with closure concept implemented to bring title check 
+//and error handling at one place. returns function as per httprouter expectations
 func makeHandler(fn func(http.ResponseWriter, *http.Request, httprouter.Params, string)) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 		m := validPath.FindStringSubmatch(params.ByName("file"))
@@ -28,9 +27,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, httprouter.Params, 
 		fn(w, r, params, m[1])
 	}
 }
-
 func viewHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params, title string) {
-
 	p, err := page.LoadPage(title)
 	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
@@ -38,9 +35,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request, params httprouter.Param
 	}
 	page.RenderTemplatePage(w, "view", p)
 }
-
 func editHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params, title string) {
-
 	p, err := page.LoadPage(title)
 	if err != nil {
 		p = &page.Page{Title: title}
@@ -58,14 +53,11 @@ func saveHandler(w http.ResponseWriter, r *http.Request, params httprouter.Param
 	}
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
-
-
 func customersHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	setHeaders(&w)
 	io.WriteString(w, customer.GetCustomers())
 }
 func customerHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-
 	custID, _ := strconv.Atoi(params.ByName("id"))
 	cust := customer.GetCustomer(custID)
 	if len(cust) == 0 {
@@ -74,9 +66,7 @@ func customerHandler(w http.ResponseWriter, r *http.Request, params httprouter.P
 	}
 	setHeaders(&w)
 	w.Write(cust) //another way of writing, edited GetCustomer to return []byte instaed of string
-
 }
-
 func customerUpdateHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	//log.Fprintln(w, "post update")
 	log.Println("Param is: ", params)
@@ -84,11 +74,9 @@ func customerUpdateHandler(w http.ResponseWriter, r *http.Request, params httpro
 	if err != nil {
 		log.Println("some error")
 	}
-
 	cust := customer.UpdateCustomer(body)
 	setHeaders(&w)
 	io.WriteString(w, cust)
-
 }
 func customerDeleteHandler(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	custID, _ := strconv.Atoi(params.ByName("id"))
@@ -96,15 +84,13 @@ func customerDeleteHandler(w http.ResponseWriter, r *http.Request, params httpro
 	setHeaders(&w)
 	io.WriteString(w, cust)
 }
-
+//Auxilary function to set CORS headers to response
 func setHeaders(w *http.ResponseWriter) {
 	(*w).Header().Set("Content-Type", "application/json; charset=utf-8")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-
 }
-
 func handleAuthRoutes (w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	p := &page.Page{Title: "Deal", Body: []byte("Here is the deal, Enjoi!!!")}
 	page.RenderTemplatePage(w, "getToken", p)
@@ -115,18 +101,14 @@ func myMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc)
     if err != nil {
         fmt.Fprintf(w, "userip: %q is not IP:port", r.RemoteAddr)
     }
-
     userIP := net.ParseIP(ip)
     if userIP == nil {
         fmt.Fprintf(w, "userip: %q is not IP:port", r.RemoteAddr)
         return
     }
-
     // This will only be defined when site is accessed via non-anonymous proxy
-    // and takes precedence over RemoteAddr
-    // Header.Get is case-insensitive
+    // and takes precedence over RemoteAddr Header.Get is case-insensitive
     forward := r.Header.Get("X-Forwarded-For")
-
     log.Printf("Client's IP: %s\n", ip)
     log.Printf("Client's Port: %s\n", port)
     log.Printf("Client's Forwarded for: %s\n", forward)
@@ -136,7 +118,7 @@ func myMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc)
 func main() {
 	router := httprouter.New() //instantiating router - httprouter
 	//advanced router http://www.gorillatoolkit.org/pkg/mux with more features 
-	
+
 	//mapping request paths to handlers
 	router.GET("/view/:file", makeHandler(viewHandler))
 	router.GET("/edit/:file", makeHandler(editHandler))
@@ -146,7 +128,6 @@ func main() {
 	router.PUT("/api/customer/:id", customerUpdateHandler)
 	router.DELETE("/api/customer/:id", customerDeleteHandler)
 	router.GET("/auth/whatsthedeal", handleAuthRoutes)
-	
 
 	//With the middleware we can stack up set of functions that will run for each of
 	//our requests before we actually land into handler function
