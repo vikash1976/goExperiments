@@ -5,7 +5,13 @@ A basic http server using httprouter and negroni
 
 ## Motivation
 
-A go http server starter project with negroni middleware to implement few routes going through middleware and few not. Integration with MongoDB. Usage of gorilla mux. 
+A go http server starter project with 
+### negroni middleware to implement few routes going through middleware and few not
+### integration with MongoDB
+### Usage of gorilla mux
+### Usage of httptest
+
+Show casing starter project to implement microservices based on listed features and tools in Go.
 
 ## Installation
 
