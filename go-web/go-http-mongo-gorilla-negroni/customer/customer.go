@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"os"
+	//"os"
+	//"errors"
 )
 
 //Customer type definition
@@ -20,16 +21,7 @@ type Customer struct {
 }
 
 
-func connect() (session *mgo.Session) {
-	connectURL := "localhost"
-	session, err := mgo.Dial(connectURL)
-	if err != nil {
-		fmt.Printf("Can't connect to mongo, go error %v\n", err)
-		os.Exit(1)
-	}
-	session.SetSafe(&mgo.Safe{})
-	return session
-}
+
 
 
 //Customers slice of Customer
@@ -51,8 +43,8 @@ var customers = Customers{
 
 
 //GetCustomer returns customer based on provided index
-func GetCustomer(custID string) []byte {
-	session := connect()
+func GetCustomer(s *mgo.Session, custID string) ([]byte, error) {
+	session := s.Copy()
 	defer session.Close()
 	var customer1 Customer
 	collection := session.DB("customers").C("customers")
@@ -62,18 +54,19 @@ func GetCustomer(custID string) []byte {
 	if err != nil {
             
             log.Println("Failed get customer: ", err)
-            return []byte("Customer Not Found")
+            Err := fmt.Errorf("Failed to get customer: %v", err)
+			return nil, Err
     }
 	log.Printf("DB Results  %v\n", customer1)
 	respBody, err := json.Marshal(customer1)
 	log.Printf("Returning Customer %s\n", customer1)
-	return respBody
+	return respBody, nil
 }
 
 //GetCustomers gets all customers
-func GetCustomers() string {
+func GetCustomers(s *mgo.Session) ([]byte, error) {
 	
-	session := connect()
+	session := s.Copy()
 	defer session.Close()
 	var customers1 []Customer
 	collection := session.DB("customers").C("customers")
@@ -82,34 +75,115 @@ func GetCustomers() string {
 	
 	if err != nil {
             
-            log.Println("Failed get all customers: ", err)
-            return "Database error"
+            log.Println("Failed get customers: ", err)
+            Err := fmt.Errorf("Failed to get customers: %v", err)
+			return nil, Err
     }
 	log.Printf("DB Results  %v\n", customers1)
 	respBody, err := json.Marshal(customers1)
 	log.Printf("Returning Customer %s\n", customers1)
-	return string(respBody)
+	return respBody, nil
 }
 
-//UpdateCustomer updates supplied customer, adds for now to the customers slice
-func UpdateCustomer(customer []byte) string {
+//AddCustomer adds supplied customer
+func AddCustomer(s *mgo.Session, customer []byte) ([]byte, error) {
+	session := s.Copy()
+	defer session.Close()
 	var c Customer
 	err := json.Unmarshal(customer, &c)
-	customers = append(customers, c)
-	if err != nil {
+	
+	collection := session.DB("customers").C("customers")
 
-		return "Error unmarshalling customer"
-	}
+	err = collection.Insert(c) 
+	if err != nil {
+            if mgo.IsDup(err) {
+				log.Println("Customer with this Name already exists: ", err)
+                Err := fmt.Errorf("Customer with this Name already exists: %v", err)
+				return nil, Err
+                
+            }
+			
+			log.Println("Database Error: ", err)
+            Err := fmt.Errorf("Database Error: %v", err)
+			return nil, Err
+    }
 	js, err := json.Marshal(c)
 	if err != nil {
-
-		return "Error marshalling customer"
+		Err := fmt.Errorf("Error marshaling: %v", err)
+		return nil, Err
 	}
-	return string(js)
+	return js, nil
+}
+
+//UpdateCustomer updates supplied customer
+func UpdateCustomer(s *mgo.Session, customer []byte) ([]byte, error) {
+	session := s.Copy()
+	defer session.Close()
+	var c Customer
+	err := json.Unmarshal(customer, &c)
+	
+	collection := session.DB("customers").C("customers")
+
+	err = collection.Update(bson.M{"Name": c.Name}, &c) 
+	if err != nil {
+            switch err {
+            default:
+                log.Println("Failed update customer: ", err)
+                Err := fmt.Errorf("Failed update customer: %v", err)
+				return nil, Err
+            case mgo.ErrNotFound:
+                log.Println("Customer not found: ", err)
+                Err := fmt.Errorf("Customer not found: %v", err)
+				return nil, Err
+            }
+    }
+	js, err := json.Marshal(c)
+	if err != nil {
+		Err := fmt.Errorf("Error marshaling: %v", err)
+		return nil, Err
+	}
+	return js, nil
+}
+
+//EnsureIndex ensures that primary key is set and reports violations accordingly 
+func EnsureIndex(s *mgo.Session) {  
+    session := s.Copy()
+    defer session.Close()
+
+    c := session.DB("customers").C("customers")
+
+    index := mgo.Index{
+        Key: []string{"Name"},
+        Unique: true,
+        DropDups: true,
+        Background: true,
+        Sparse: true,
+    }
+    err := c.EnsureIndex(index)
+    if err != nil {
+        log.Fatal(err)
+    }
 }
 
 //DeleteCustomer deletes customer at given index
-func DeleteCustomer(i int) string {
-	customers = append(customers[:i], customers[i+1:]...)
-	return `{message: "Customer deleted"}`
+func DeleteCustomer(s *mgo.Session, custID string) ([]byte, error) {
+		session := s.Copy()
+        defer session.Close()
+
+        c := session.DB("customers").C("customers")
+
+        err := c.Remove(bson.M{"Name": custID})
+        if err != nil {
+            switch err {
+            default:
+                log.Println("Failed deleting customer: ", err)
+                Err := fmt.Errorf("Failed update customer: %v", err)
+				return nil, Err
+            case mgo.ErrNotFound:
+                log.Println("Customer not found: ", err)
+                Err := fmt.Errorf("Customer not found: %v", err)
+				return nil, Err
+			}
+        }
+		return []byte(`{message: "Customer deleted"}`), nil
 }

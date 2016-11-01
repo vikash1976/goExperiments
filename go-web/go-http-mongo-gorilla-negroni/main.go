@@ -6,13 +6,15 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"github.com/vikash1976/goExperiments/go-web/go-http-server-gorilla-mux/page"
-	"github.com/vikash1976/goExperiments/go-web/go-http-server-gorilla-mux/customer"
+	"github.com/vikash1976/goExperiments/go-web/go-http-mongo-gorilla-negroni/page"
+	"github.com/vikash1976/goExperiments/go-web/go-http-mongo-gorilla-negroni/customer"
 	"github.com/codegangsta/negroni"
 	"net"
-	
+	"io/ioutil"
+	"gopkg.in/mgo.v2"
+	"os"
 )
-
+//ArticlesCategoryHandler dummy handler- exploring URL patterns
 func ArticlesCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("All categories")
 	vars := mux.Vars(r)
@@ -20,7 +22,7 @@ func ArticlesCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	sort := vars["sort"]
 	fmt.Printf("Req: %v\n%v\n", category, sort)
 }
-
+//ArticleHandler dummy handler- exploring URL patterns
 func ArticleHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Particular category")
 	vars := mux.Vars(r)
@@ -66,51 +68,85 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func customersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(customer.GetCustomers()))
+	
+	res, err := customer.GetCustomers(session)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "{message: %q}", err)
+	}
+	w.Write(res)
 }
 func customerHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	//custID, _ := strconv.Atoi(id)
-	cust := customer.GetCustomer(id)
 	
+	cust, err := customer.GetCustomer(session, id)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "{message: %q}", err)
+	}
 	w.Write(cust)
 }
-/*
-func customerUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	//log.Fprintln(w, "post update")
-	log.Println("Param is: ", params)
+func customerAddHandler(w http.ResponseWriter, r *http.Request) {
+	
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println("some error")
 	}
-	cust := customer.UpdateCustomer(body)
-	setHeaders(&w)
-	io.WriteString(w, cust)
+	cust, err := customer.AddCustomer(session, body)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "{message: %q}", err)
+	}
+	w.WriteHeader(http.StatusCreated)
+	w.Write(cust)
+}
+func customerUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println("some error")
+	}
+	cust, err := customer.UpdateCustomer(session, body)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "{message: %q}", err)
+	}
+	w.WriteHeader(http.StatusCreated)
+	w.Write(cust)
 }
 func customerDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	custID, _ := strconv.Atoi(params.ByName("id"))
-	cust := customer.DeleteCustomer(custID)
-	setHeaders(&w)
-	io.WriteString(w, cust)
+	vars := mux.Vars(r)
+	id := vars["id"]
+	
+	cust, err := customer.DeleteCustomer(session, id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "{message: %q}", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	w.Write(cust)
+	
 }
-*/
+
 func handleAuthRoutes (w http.ResponseWriter, r *http.Request) {
 	log.Println("In auth handler")
 	p := &page.Page{Title: "TOKEN", Body: []byte("Token x-Auth will be set in localStorage!!!")}
 	page.RenderTemplatePage(w, "getToken", p)
 }
 //AuthMiddleware checks auth token
-type AuthMiddleware struct {
-    
+type AuthMiddleware struct {    
 }
-
 // NewAuthMiddleware is a struct that has a ServeHTTP method
 func NewAuthMiddleware() *AuthMiddleware {
     return &AuthMiddleware{}
 }
 
-// The middleware handler
+// The middleware handler - all configured request(s) hits this before landing into its handler func
 func (l *AuthMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
    if origin := r.Header.Get("Origin"); origin != "" {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -143,11 +179,11 @@ func (l *AuthMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next 
 	if len(authHeader) != 0 {
   		next(w, r)//call next function on the stack of middleware
 	}else {
-		http.Redirect(w, r, "/token/getToken", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/token/getToken", http.StatusTemporaryRedirect)//dummy page where token management can be designed
 	}
 }
-
-func main() {
+//Handlers returns mux Router
+func Handlers() *mux.Router {
 	r := mux.NewRouter()
 	s := r.PathPrefix("/articles/{category}").Subrouter()
 	r.HandleFunc("/articles/{category}/order/{sort:(?:asc|desc|new)}", ArticlesCategoryHandler)
@@ -168,19 +204,38 @@ func main() {
 	apiRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
 	apiRouter.HandleFunc("/customers", customersHandler).Methods("GET")
 	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerHandler).Methods("GET")
+	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerUpdateHandler).Methods("PUT")
+	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerAddHandler).Methods("POST")
+	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerDeleteHandler).Methods("DELETE")
 	r.PathPrefix("/api").Handler(negroni.New(
 		NewAuthMiddleware(),
 		negroni.Wrap(apiRouter),
 	))
-	/*
+	return r
+}
+//Database connector
+func connect() (session *mgo.Session) {
+	connectURL := "localhost"
+	session, err := mgo.Dial(connectURL)
+	if err != nil {
+		fmt.Printf("Can't connect to mongo, go error %v\n", err)
+		os.Exit(1)
+	}
+	session.SetSafe(&mgo.Safe{})
+	return session
+}
+var session *mgo.Session
+func init() {
+	session = connect()
+	customer.EnsureIndex(session)
+}
+func main() {
+	defer session.Close()
 	
-	router.PUT("/api/customer/:id", customerUpdateHandler)
-	router.DELETE("/api/customer/:id", customerDeleteHandler)
-	*/
 	srv := &http.Server{
-		Handler: r,
+		Handler: Handlers(),
 		Addr:    "localhost:8070",
-		// Good practice: enforce timeouts for servers you create!
+		// Good practice: enforce timeouts for servers we create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}

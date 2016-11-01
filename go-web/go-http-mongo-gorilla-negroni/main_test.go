@@ -2,32 +2,59 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/julienschmidt/httprouter"
-	"github.com/vikash1976/goExperiments/go-web/go-http-server/customer"
+	"fmt"
+	"github.com/vikash1976/goExperiments/go-web/go-http-mongo-gorilla-negroni/customer"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"io"
+	
 )
 
-//Testing a GET method
-func Test_customerHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "http://localhost:8070/customer", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+var (
+    server   *httptest.Server
+    reader   io.Reader 
+    customersUrl string
+	customerUrl string
+)
 
-	var params httprouter.Params
-	params = append(params, httprouter.Param{Key: "id", Value: "2"})
+func init() {
+    server = httptest.NewServer(Handlers()) //Creating new server with the user handlers
 
-	res := httptest.NewRecorder()
-	customerHandler(res, req, params)
+    customersUrl = fmt.Sprintf("%s/api/customers", server.URL) //Grab the address for the API endpoint
+	customerUrl = fmt.Sprintf("%s/api/customer/C7", server.URL)
+}
 
-	//exp := `{"name":"C1","email":"c1@in.com","phone":"9999999999"}`
-	//act := res.Body.String()
-	var c customer.Customer
-	exp := "c2@in.com"
+func TestCustomersHandler(t *testing.T) {
+    
+    request, err := http.NewRequest("GET", customersUrl, nil) //Create request with JSON body
+	request.Header.Set("x-Auth", "Vikash")
+
+    res, err := http.DefaultClient.Do(request)
+
+    if err != nil {
+        t.Error(err) //Something is wrong while sending request
+    }
+
+    if res.StatusCode != 200 {
+        t.Errorf("Success expected: %d", res.StatusCode) //this means our test failed
+    }
+}
+func TestCustomerHandler(t *testing.T) {
+    
+    request, err := http.NewRequest("GET", customerUrl, nil) //Create request with JSON body
+	request.Header.Set("x-Auth", "Vikash")
+
+    res, err := http.DefaultClient.Do(request)
+
+    if err != nil {
+        t.Error(err) //Something is wrong while sending request
+    }
+
+    var c customer.Customer
+	exp := "c7@in.com"
 	body, _ := ioutil.ReadAll(res.Body)
 	err = json.Unmarshal(body, &c)
 	act := c.Email
@@ -36,45 +63,56 @@ func Test_customerHandler(t *testing.T) {
 	}
 }
 
-//Testing a PUT method
-func Test_customerUpdateHandler(t *testing.T) {
-	req, err := http.NewRequest("PUT", "http://localhost:8070/customer", strings.NewReader(`{"name":"C3","email":"c3@in.com","phone":"8899997777"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestCustomerUpdateHandler(t *testing.T) {
+    customerJSON := `{"Name": "C7", "Email": "c7@in.com", "Phone": "7777778877"}`
 
-	var params httprouter.Params
-	params = append(params, httprouter.Param{Key: "id", Value: "3"})
+    reader = strings.NewReader(customerJSON) //Convert string to reader
 
-	res := httptest.NewRecorder()
-	customerUpdateHandler(res, req, params)
+    request, err := http.NewRequest("PUT", customerUrl, reader) //Create request with JSON body
+	request.Header.Set("x-Auth", "Vikash")
 
-	var c customer.Customer
-	exp := "c3@in.com"
-	body, _ := ioutil.ReadAll(res.Body)
-	err = json.Unmarshal(body, &c)
-	act := c.Email
-	if exp != act {
-		t.Fatalf("Expected %s received %s", exp, act)
-	}
+    res, err := http.DefaultClient.Do(request)
+
+    if err != nil {
+        t.Error(err) //Something is wrong while sending request
+    }
+
+   if res.StatusCode != 201 {
+        t.Errorf("Success expected: %d", res.StatusCode) //this means our test failed
+    }
 }
 
-//Testing a DELETE method
-func Test_customerDeleteHandler(t *testing.T) {
-	req, err := http.NewRequest("DELETE", "http://localhost:8070/customer", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestCustomerAddHandler(t *testing.T) {
+    customerJSON := `{"Name": "C7", "Email": "c7@in.com", "Phone": "7777778877"}`
 
-	var params httprouter.Params
-	params = append(params, httprouter.Param{Key: "id", Value: "1"})
+    reader = strings.NewReader(customerJSON) //Convert string to reader
 
-	res := httptest.NewRecorder()
-	customerDeleteHandler(res, req, params)
+    request, err := http.NewRequest("POST", customerUrl, reader) //Create request with JSON body
+	request.Header.Set("x-Auth", "Vikash")
 
-	exp := `{message: "Customer deleted"}`
-	act := res.Body.String()
-	if exp != act {
-		t.Fatalf("Expected %s received %s", exp, act)
-	}
+    res, err := http.DefaultClient.Do(request)
+
+    if err != nil {
+        t.Error(err) //Something is wrong while sending request
+    }
+
+   if res.StatusCode != 201 {
+        t.Errorf("Success expected: %d", res.StatusCode) //this means our test failed
+    }
+}
+
+func TestCustomerDeleteHandler(t *testing.T) {
+    
+    request, err := http.NewRequest("DELETE", customerUrl, nil) //Create request with JSON body
+	request.Header.Set("x-Auth", "Vikash")
+
+    res, err := http.DefaultClient.Do(request)
+
+    if err != nil {
+        t.Error(err) //Something is wrong while sending request
+    }
+
+    if res.StatusCode != 204 {
+        t.Errorf("Success expected: %d", res.StatusCode) //this means our test failed
+    }
 }
