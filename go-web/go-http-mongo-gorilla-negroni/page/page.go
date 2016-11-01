@@ -4,9 +4,9 @@ package page
 Package with all page related functions
 ****/
 import (
-	"log"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -28,7 +28,7 @@ func (p *Page) Save() error {
 func LoadPage(title string) (*Page, error) {
 	filename := title + ".txt"
 	log.Printf("Reading file: %s\n", filename)
-	
+
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
