@@ -1,6 +1,7 @@
 ## Synopsis
 
-A basic http server using httprouter and negroni
+An  http server using gorilla mux, negroni and mongodb as backend, show casing starter project to implement microservices based on listed features and tools in Go.
+
 
 
 ## Motivation
@@ -11,7 +12,6 @@ A go http server starter project with
 - Usage of gorilla mux
 - Usage of httptest
 
-Show casing starter project to implement microservices based on listed features and tools in Go.
 
 ## Installation
 
