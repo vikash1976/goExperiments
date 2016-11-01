@@ -9,33 +9,21 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
-	//"os"
-	//"errors"
 )
 
 //Customer type definition
 type Customer struct {
+	ID string `bson:"ID"`
 	Name  string `bson:"Name"`
 	Email string `bson:"Email"`
 	Phone string `bson:"Phone"`
+	Category string `bson:"Category"`
+	Networth float64 `bson:"Networth"`
 }
 
 //Customers slice of Customer
 type Customers []Customer
 
-//Dummy customers slice
-var customers = Customers{
-	{
-		Name:  "C1",
-		Email: "c1@in.com",
-		Phone: "9999999999",
-	},
-	{
-		Name:  "C2",
-		Email: "c2@in.com",
-		Phone: "8899999988",
-	},
-}
 
 //GetCustomer returns customer based on provided index
 func GetCustomer(s *mgo.Session, custID string) ([]byte, error) {
@@ -44,7 +32,7 @@ func GetCustomer(s *mgo.Session, custID string) ([]byte, error) {
 	var customer1 Customer
 	collection := session.DB("customers").C("customers")
 
-	err := collection.Find(bson.M{"Name": custID}).One(&customer1)
+	err := collection.Find(bson.M{"ID": custID}).One(&customer1)
 
 	if err != nil {
 
@@ -119,7 +107,7 @@ func UpdateCustomer(s *mgo.Session, customer []byte) ([]byte, error) {
 
 	collection := session.DB("customers").C("customers")
 
-	err = collection.Update(bson.M{"Name": c.Name}, &c)
+	err = collection.Update(bson.M{"ID": c.ID}, &c)
 	if err != nil {
 		switch err {
 		default:
@@ -148,7 +136,7 @@ func EnsureIndex(s *mgo.Session) {
 	c := session.DB("customers").C("customers")
 
 	index := mgo.Index{
-		Key:        []string{"Name"},
+		Key:        []string{"ID"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
@@ -181,4 +169,36 @@ func DeleteCustomer(s *mgo.Session, custID string) ([]byte, error) {
 		}
 	}
 	return []byte(`{message: "Customer deleted"}`), nil
+}
+//CategoryTotal category wise totla networth
+type CategoryTotal struct {
+	Category string
+	Amount   float64
+}
+//GetCustomerCategoryTotals returns total on networth category wise
+func GetCustomerCategoryTotals(s *mgo.Session) ([]byte, error) {
+	session := s.Copy()
+	defer session.Close()
+
+	c := session.DB("customers").C("customers")
+	
+	var categoryTotals []CategoryTotal
+
+	//Group by category, the amount spent on a category
+	pipe := c.Pipe([]bson.M{{"$group": bson.M{"_id": "$Category",
+		"TotalAmount": bson.M{"$sum": "$Networth"}}}})
+	iter := pipe.Iter()
+	var x map[string]interface{}
+	for iter.Next(&x) {
+		categoryTotals = append(categoryTotals,
+			CategoryTotal{Category: x["_id"].(string),
+				Amount: x["TotalAmount"].(float64)})
+	}
+	js, err := json.Marshal(categoryTotals)
+	if err != nil {
+		Err := fmt.Errorf("Error marshaling: %v", err)
+		return nil, Err
+	}
+	return js, nil
+	
 }

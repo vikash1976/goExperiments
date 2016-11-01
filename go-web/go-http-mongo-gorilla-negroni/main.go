@@ -79,6 +79,17 @@ func customersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(res)
 }
+
+func customersStatsHandler(w http.ResponseWriter, r *http.Request) {
+
+	res, err := customer.GetCustomerCategoryTotals(session)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "{message: %q}", err)
+	}
+	w.Write(res)
+}
 func customerHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -207,10 +218,12 @@ func Handlers() *mux.Router {
 	))
 	apiRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
 	apiRouter.HandleFunc("/customers", customersHandler).Methods("GET")
+	apiRouter.HandleFunc("/customers/stats", customersStatsHandler).Methods("GET")
 	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerHandler).Methods("GET")
 	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerUpdateHandler).Methods("PUT")
-	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerAddHandler).Methods("POST")
+	apiRouter.HandleFunc("/customer", customerAddHandler).Methods("POST")
 	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerDeleteHandler).Methods("DELETE")
+	
 	r.PathPrefix("/api").Handler(negroni.New(
 		NewAuthMiddleware(),
 		negroni.Wrap(apiRouter),
