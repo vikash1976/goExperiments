@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"io"
 )
 
 //ArticlesCategoryHandler dummy handler- exploring URL patterns
@@ -31,6 +32,7 @@ func ArticleHandler(w http.ResponseWriter, r *http.Request) {
 	category := vars["category"]
 	id := vars["id"]
 	fmt.Printf("Req: %v\n%v\n", category, id)
+	io.WriteString(w, "It works")
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +99,7 @@ func customerHandler(w http.ResponseWriter, r *http.Request) {
 	cust, err := customer.GetCustomer(session, id)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusPartialContent)
 		fmt.Fprintf(w, "{message: %q}", err)
 	}
 	w.Write(cust)
@@ -190,7 +192,7 @@ func (l *AuthMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next 
 	log.Printf("Client's IP: %s\n", ip)
 	log.Printf("Client's Port: %s\n", port)
 	log.Printf("Client's Forwarded for: %s\n", forward)
-	authHeader := r.Header.Get("x-Auth")
+	authHeader := r.Header.Get("xAuth")
 	if len(authHeader) != 0 {
 		next(w, r) //call next function on the stack of middleware
 	} else {
@@ -207,6 +209,8 @@ func Handlers() *mux.Router {
 
 	//mapping request paths to handlers
 	r.HandleFunc("/token/getToken", handleAuthRoutes)
+	r.HandleFunc("/api/customers", customersHandler)
+	
 
 	r.HandleFunc("/view/{file:[a-z,A-Z,0-9]+}", viewHandler)
 	r.HandleFunc("/edit/{file:[a-z,A-Z,0-9]+}", editHandler)
@@ -217,7 +221,7 @@ func Handlers() *mux.Router {
 		negroni.Wrap(saveRouter),
 	))
 	apiRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
-	apiRouter.HandleFunc("/customers", customersHandler).Methods("GET")
+	//apiRouter.HandleFunc("/customers", customersHandler).Methods("GET")
 	apiRouter.HandleFunc("/customers/stats", customersStatsHandler).Methods("GET")
 	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerHandler).Methods("GET")
 	apiRouter.HandleFunc("/customer/{id:C[0-9]+}", customerUpdateHandler).Methods("PUT")

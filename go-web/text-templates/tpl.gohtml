@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+<body>
+
+{{range $key, $val  := .}}
+    Academic Year - {{$val.AcaYear}}
+    Semester - {{$val.Fall.Term}}
+    {{range $val.Fall.Courses}}
+        {{.Name}} - {{.Number}} - {{.Units}}
+    {{end}}
+    Semester {{$val.Spring.Term}}
+    {{range $val.Spring.Courses}}
+        {{.Name}} - {{.Number}} - {{.Units}}
+    {{end}}
+
+<!-- PUT YOUR CODE HERE TO SHOW THE DATA-->
+
+{{end}}
+
+</body>
+</html>
