@@ -43,7 +43,8 @@ func main() {
 func requestHandler(w http.ResponseWriter, req *http.Request) {
 	// context with timeout of 2 seconds, will wait for work to be completed within 2 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout * time.Second)
-	defer cancel()
+	defer cancel()// before request handler completes it calls cancel 
+	// function so that context is canclelled and every one is notified
 
 	fmt.Println("Doing some work")
 	workResp := make(chan responseDetails)

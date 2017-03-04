@@ -1,0 +1,6 @@
+{
+    "Timeout": 30,
+    "UnpredictableServerURL": "http://localhost:8080",
+    "UnpredictableServerURL2": "http://localhost:8085",
+    "UnpredictableServerURL3": "http://localhost:8082"
+}
